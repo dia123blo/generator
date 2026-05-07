@@ -237,3 +237,139 @@ def powerset(iterable, min_size=0, max_size=-1):
     if max_size == -1:
         max_size = len(s)
     return chain.from_iterable(combinations(s, r) for r in range(min_size, max_size+1))
+
+
+# ===== Device Parameterization (64-dim) =====
+DEVICE_TYPE_ENCODING = {
+    "NMOS": 0,
+    "PMOS": 1,
+    "INDUCTOR": 2,
+    "CAPACITOR": 3,
+    "RESISTOR": 4,
+    "DIODE": 5,
+    "BJT": 6,
+}
+
+VOLTAGE_DOMAIN_ENCODING = {
+    "HVD": 0,
+    "CVD": 1,
+    "LVD": 2,
+}
+
+# 单位: 米
+TECH_NODE_LIMITS = {
+    "110nm": {
+        "min_W": 110e-9,
+        "min_L": 110e-9,
+        "max_W": 100e-6,
+        "max_L": 10e-6,
+    },
+    "180nm": {
+        "min_W": 180e-9,
+        "min_L": 180e-9,
+        "max_W": 100e-6,
+        "max_L": 10e-6,
+    },
+}
+
+
+def _normalized(value, min_val, max_val):
+    if max_val <= min_val:
+        return 0.0
+    return float((value - min_val) / (max_val - min_val))
+
+
+def build_device_feature_vector(
+    device_type,
+    voltage_domain,
+    width,
+    length,
+    multiplier,
+    fingers,
+    tech_node="180nm",
+):
+    """
+    构建64维器件级嵌入向量:
+    [0:7]   设备类型one-hot
+    [7:10]  电压域one-hot
+    [10:14] 连续尺寸特征(归一化W/L/M/F)
+    [14:64] 预留维度(默认0)
+    """
+    if tech_node not in TECH_NODE_LIMITS:
+        raise ValueError("Unsupported tech_node: %s" % tech_node)
+
+    if device_type not in DEVICE_TYPE_ENCODING:
+        raise ValueError("Unsupported device_type: %s" % device_type)
+
+    if voltage_domain not in VOLTAGE_DOMAIN_ENCODING:
+        raise ValueError("Unsupported voltage_domain: %s" % voltage_domain)
+
+    limits = TECH_NODE_LIMITS[tech_node]
+    min_w, max_w = limits["min_W"], limits["max_W"]
+    min_l, max_l = limits["min_L"], limits["max_L"]
+
+    # 严格遵守工艺最小W/L约束
+    width = max(width, min_w)
+    length = max(length, min_l)
+    width = min(width, max_w)
+    length = min(length, max_l)
+
+    multiplier = max(1, int(multiplier))
+    fingers = max(1, int(fingers))
+
+    h = [0.0] * 64
+
+    # 离散编码
+    h[DEVICE_TYPE_ENCODING[device_type]] = 1.0
+    h[7 + VOLTAGE_DOMAIN_ENCODING[voltage_domain]] = 1.0
+
+    # 连续尺寸特征
+    h[10] = _normalized(width, min_w, max_w)
+    h[11] = _normalized(length, min_l, max_l)
+    h[12] = _normalized(multiplier, 1, 128)
+    h[13] = _normalized(fingers, 1, 128)
+
+    return h
+
+
+def sample_device_parameterization(tech_node="180nm"):
+    """
+    采样单个器件参数并返回64维特征向量及原始参数.
+    """
+    if tech_node not in TECH_NODE_LIMITS:
+        raise ValueError("Unsupported tech_node: %s" % tech_node)
+
+    limits = TECH_NODE_LIMITS[tech_node]
+    device_type = random.choice(list(DEVICE_TYPE_ENCODING.keys()))
+    voltage_domain = random.choice(list(VOLTAGE_DOMAIN_ENCODING.keys()))
+    width = random.uniform(limits["min_W"], limits["max_W"])
+    length = random.uniform(limits["min_L"], limits["max_L"])
+    multiplier = random.randint(1, 128)
+    fingers = random.randint(1, 128)
+
+    feature_vector = build_device_feature_vector(
+        device_type=device_type,
+        voltage_domain=voltage_domain,
+        width=width,
+        length=length,
+        multiplier=multiplier,
+        fingers=fingers,
+        tech_node=tech_node,
+    )
+
+    return {
+        "device_type": device_type,
+        "voltage_domain": voltage_domain,
+        "W": width,
+        "L": length,
+        "Multiplier": multiplier,
+        "Number_of_Fingers": fingers,
+        "h_vD_0": feature_vector,
+    }
+
+
+def sample_device_parameterization_list(number_of_devices, tech_node="180nm"):
+    """
+    批量采样器件参数表征.
+    """
+    return [sample_device_parameterization(tech_node=tech_node) for _ in range(number_of_devices)]
