@@ -119,7 +119,7 @@ def generate_graphs(graph_generator, number_of_graph_vertices, number_of_graph_e
         
         # 确保图属性是GML兼容类型
         graph.vs["label"] = [str(x) for x in graph.vs["label"]]
-        graph.es["label"] = [str(x) for x in graph.es["label"]]  # 已经是字符型
+        graph.es["label"] = [str(x) for x in graph.es["label"]]  # 统一转换为字符串，确保GML兼容
         
         # 将生成的图和元数据添加到列表中（关键步骤）
         graphs.append(graph)
