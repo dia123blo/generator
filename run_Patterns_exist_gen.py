@@ -6,7 +6,7 @@ import json
 from multiprocessing import Pool
 from utils import generate_labels, get_direction
 from pattern_checker_P import PatternChecker
-from graph_generator_Patterns_exist_short_gen import GraphGenerator
+from graph_generator_Patterns_exist_gen import GraphGenerator
 from pattern_generator_P import generate_patterns
 from time import sleep
 from tqdm import tqdm
@@ -32,9 +32,9 @@ DEBUG_CONFIG = {
     "max_ratio_of_edges_vertices": 4,
     "max_pattern_counts": 1024,
 
-    "save_data_dir": r"./data/debug_New_P",
-    "num_workers": 1,
-    "existing_pattern_dir": r"./data/debug_New_P/patterns"  # 新增配置项：已有pattern的目录路径
+    "save_data_dir": r"./data/debug_Patterns_exist_gen",
+    "num_workers": 16,
+    "existing_pattern_dir": r"E:\wyh\layout\code\output\pattern"  # 新增配置项：已有pattern的目录路径
 }
 
 SMALL_CONFIG = {
@@ -111,16 +111,15 @@ def generate_graphs(graph_generator, number_of_graph_vertices, number_of_graph_e
     metadatas = []
     
     for g in range(number_of_graphs):
-        # 确保总是返回subisomorphisms信息
         graph, metadata = graph_generator.generate(
             number_of_graph_vertices, number_of_graph_edges, 
             number_of_graph_vertex_labels, number_of_graph_edge_labels,
             alpha, max_pattern_counts=max_pattern_counts, 
-            max_subgraph=max_subgraph, return_subisomorphisms=True)  # 强制返回subisomorphisms
+            max_subgraph=max_subgraph, return_subisomorphisms=True)
         
         # 确保图属性是GML兼容类型
-        graph.vs["label"] = [int(x) for x in graph.vs["label"]]
-        graph.es["label"] = [int(x) for x in graph.es["label"]]  # 已经是字符型
+        graph.vs["label"] = [str(x) for x in graph.vs["label"]]
+        graph.es["label"] = [str(x) for x in graph.es["label"]]  # 已经是字符型
         
         # 将生成的图和元数据添加到列表中（关键步骤）
         graphs.append(graph)
@@ -134,28 +133,19 @@ def generate_graphs(graph_generator, number_of_graph_vertices, number_of_graph_e
         pattern_checker = PatternChecker()
         actual_count = pattern_checker.count_subisomorphisms(graph, graph_generator.pattern)
         
-        # 如果metadata中的计数与实际计数不符，或者subisomorphisms为空但实际有匹配
-        if actual_count != counts or (actual_count > 0 and len(subisomorphisms) == 0):
+        if actual_count != counts:
             print(f"警告: 图 {graphs_id}_{g} 的pattern计数不匹配: "
                   f"metadata={counts}, 实际={actual_count}")
-            
-            # 重新获取subisomorphisms
-            if actual_count > 0 and len(subisomorphisms) == 0:
-                actual_subisomorphisms = pattern_checker.get_subisomorphisms(graph, graph_generator.pattern)
-                metadata["subisomorphisms"] = actual_subisomorphisms
-                print(f"已重新获取 {len(actual_subisomorphisms)} 个subisomorphisms")
-            
-            # 更新计数
+            # 更新metadata
             metadata["counts"] = actual_count
             metadata["verified_count"] = actual_count
             # 更新列表中的metadata
             metadatas[g] = metadata
             
         # 记录子图信息
-        updated_subisomorphisms = metadata.get("subisomorphisms", [])
         if actual_count > 0:
             subgraph_info_lines.append(f"Graph: {graphs_id}_{g}.gml, Subgraph Count: {actual_count}")
-            for i, subiso in enumerate(updated_subisomorphisms):
+            for i, subiso in enumerate(subisomorphisms):
                 subgraph_info_lines.append(f"  Subgraph {i+1}: Nodes {subiso}")
         else:
             subgraph_info_lines.append(f"Graph: {graphs_id}_{g}.gml, Subgraph Count: 0")
@@ -262,9 +252,9 @@ def load_existing_patterns(pattern_dir):
                     continue
                     
                 # 确保属性是字符型
-                pattern.vs["label"] = [int(x) for x in pattern.vs["label"]]
+                pattern.vs["label"] = [str(x) for x in pattern.vs["label"]]
                 if pattern.ecount() > 0:
-                    pattern.es["label"] = [int(x) for x in pattern.es["label"]]
+                    pattern.es["label"] = [str(x) for x in pattern.es["label"]]
                 
                 # 提取pattern参数信息
                 pattern_info = {
@@ -362,7 +352,129 @@ def create_simple_pattern_from_filename(filename):
         print(f"Error creating simple pattern from {filename}: {e}")
         return None
 
+# if __name__ == "__main__":
+#     save_pattern_dir = os.path.join(CONFIG["save_data_dir"], "patterns")
+#     save_graph_dir = os.path.join(CONFIG["save_data_dir"], "graphs")
+#     save_metadata_dir = os.path.join(CONFIG["save_data_dir"], "metadata")
+#     os.makedirs(CONFIG["save_data_dir"], exist_ok=True)
+#     os.makedirs(save_pattern_dir, exist_ok=True)
+#     os.makedirs(save_graph_dir, exist_ok=True)
+#     os.makedirs(save_metadata_dir, exist_ok=True)
 
+#     np.random.seed(0)
+
+#     # 检查是否使用已有pattern
+#     if CONFIG.get("existing_pattern_dir") and os.path.exists(CONFIG["existing_pattern_dir"]):
+#         print("Using existing patterns from:", CONFIG["existing_pattern_dir"])
+#         existing_patterns = load_existing_patterns(CONFIG["existing_pattern_dir"])
+        
+#         # 如果已有pattern目录不是当前保存目录，复制pattern文件到当前目录
+#         if CONFIG["existing_pattern_dir"] != save_pattern_dir:
+#             for pattern_info in existing_patterns:
+#                 dest_path = os.path.join(save_pattern_dir, pattern_info['file'])
+#                 if not os.path.exists(dest_path):
+#                     import shutil
+#                     shutil.copy2(pattern_info['path'], dest_path)
+#                     print(f"Copied pattern to: {dest_path}")
+#     else:
+#         # 原有pattern生成逻辑
+#         print("Generating new patterns...")
+#         pattern_cnt = 0
+#         for number_of_pattern_vertices in CONFIG["number_of_pattern_vertices"]:
+#             for number_of_pattern_vertex_labels in CONFIG["number_of_pattern_vertex_labels"]:
+#                 if number_of_pattern_vertex_labels > number_of_pattern_vertices:
+#                     continue
+#                 for number_of_pattern_edges in CONFIG["number_of_pattern_edges"]:
+#                     if number_of_pattern_edges < number_of_pattern_vertices - 1: # not connected
+#                         continue
+#                     if number_of_pattern_edges > CONFIG["max_ratio_of_edges_vertices"] * number_of_pattern_vertices: # too dense
+#                         continue
+#                     for number_of_pattern_edge_labels in CONFIG["number_of_pattern_edge_labels"]:
+#                         if number_of_pattern_edge_labels > number_of_pattern_edges:
+#                             continue
+#                         patterns_id = "P_N%d_E%d_NL%d_EL%d" % (
+#                             number_of_pattern_vertices, number_of_pattern_edges, number_of_pattern_vertex_labels, number_of_pattern_edge_labels)
+#                         for p, pattern in enumerate(generate_patterns(
+#                             number_of_pattern_vertices, number_of_pattern_edges, number_of_pattern_vertex_labels, number_of_pattern_edge_labels,
+#                             CONFIG["number_of_patterns"])):
+#                             # 确保模式图属性是字符型
+#                             pattern.vs["label"] = [str(x) for x in pattern.vs["label"]]
+#                             pattern.es["label"] = [str(x) for x in pattern.es["label"]]  # 边标签改为字符型
+#                             if "key" in pattern.es.attributes():
+#                                 pattern.es["key"] = [str(x) for x in pattern.es["key"]]
+#                             pattern.write(os.path.join(save_pattern_dir, patterns_id + "_%d.gml" % (p)))
+#                         pattern_cnt += CONFIG["number_of_patterns"]
+#                         print("patterns_id", patterns_id)
+#         print("%d patterns generation finished!" % (pattern_cnt))
+        
+#         # 加载新生成的patterns
+#         existing_patterns = load_existing_patterns(save_pattern_dir)
+
+#         # 根据已有patterns生成graphs
+#     graph_cnt = 0
+#     pool = Pool(CONFIG["num_workers"])
+#     results = list()
+    
+#     # 为每个pattern文件单独处理，而不是按组处理
+#     for p, pattern_info in enumerate(existing_patterns):
+#         pattern = pattern_info['pattern']
+#         pattern_file = pattern_info['file']
+#         # 使用完整的文件名（不含扩展名）作为基础名，保持原始pattern名称
+#         base_name = os.path.splitext(pattern_file)[0]
+        
+#         # 确保pattern的边标签是字符型
+#         if pattern.ecount() > 0:
+#             pattern.es["label"] = [str(x) for x in pattern.es["label"]]
+        
+#         graph_generator = GraphGenerator(pattern)
+        
+#         # 使用pattern的实际参数而不是配置中的参数
+#         pattern_vertices = pattern.vcount()
+#         pattern_edges = pattern.ecount()
+#         pattern_vertex_labels = len(set(pattern.vs["label"]))
+#         pattern_edge_labels = len(set(pattern.es["label"])) if pattern.ecount() > 0 else 0
+        
+#         # 为每个pattern只创建一个目录，使用原始pattern名称
+#         save_graph_dir_p = os.path.join(save_graph_dir, base_name)
+#         save_metadata_dir_p = os.path.join(save_metadata_dir, base_name)
+#         if not os.path.isdir(save_graph_dir_p):
+#             os.makedirs(save_graph_dir_p, exist_ok=True)
+#         if not os.path.isdir(save_metadata_dir_p):
+#             os.makedirs(save_metadata_dir_p, exist_ok=True)
+        
+#         for alpha in CONFIG["alphas"]:
+#             for number_of_graph_vertices in CONFIG["number_of_graph_vertices"]:
+#                 if number_of_graph_vertices < pattern_vertices:
+#                     continue
+#                 for number_of_graph_vertex_labels in CONFIG["number_of_graph_vertex_labels"]:
+#                     if number_of_graph_vertex_labels > number_of_graph_vertices:
+#                         continue
+#                     if number_of_graph_vertex_labels < pattern_vertex_labels:
+#                         continue
+#                     for number_of_graph_edges in CONFIG["number_of_graph_edges"]:
+#                         if number_of_graph_edges < number_of_graph_vertices - 1: # not connected
+#                             continue
+#                         if number_of_graph_edges > CONFIG["max_ratio_of_edges_vertices"] * number_of_graph_vertices: # too dense
+#                             continue
+#                         if number_of_graph_edges < pattern_edges:
+#                             continue
+#                         for number_of_graph_edge_labels in CONFIG["number_of_graph_edge_labels"]:
+#                             if number_of_graph_edge_labels > number_of_graph_edges:
+#                                 continue
+#                             if number_of_graph_edge_labels < pattern_edge_labels:
+#                                 continue
+#                             results.append(
+#                                 pool.apply_async(generate_graphs, args=(
+#                                     graph_generator, number_of_graph_vertices, number_of_graph_edges,
+#                                     number_of_graph_vertex_labels, number_of_graph_edge_labels,
+#                                     alpha, CONFIG["max_pattern_counts"], CONFIG["max_subgraph"],
+#                                     CONFIG["number_of_graphs"], save_graph_dir_p, save_metadata_dir_p)))
+#                             graph_cnt += CONFIG["number_of_graphs"]
+    
+#     pool.close()
+#     for x in tqdm(results):
+#         x.get()
+#     print("%d graphs generation finished!" % (graph_cnt))
 if __name__ == "__main__":
     save_pattern_dir = os.path.join(CONFIG["save_data_dir"], "patterns")
     save_graph_dir = os.path.join(CONFIG["save_data_dir"], "graphs")
@@ -409,10 +521,10 @@ if __name__ == "__main__":
                             number_of_pattern_vertices, number_of_pattern_edges, number_of_pattern_vertex_labels, number_of_pattern_edge_labels,
                             CONFIG["number_of_patterns"])):
                             # 确保模式图属性是字符型
-                            pattern.vs["label"] = [int(x) for x in pattern.vs["label"]]
-                            pattern.es["label"] = [int(x) for x in pattern.es["label"]]  # 边标签改为字符型
+                            pattern.vs["label"] = [str(x) for x in pattern.vs["label"]]
+                            pattern.es["label"] = [str(x) for x in pattern.es["label"]]  # 边标签改为字符型
                             if "key" in pattern.es.attributes():
-                                pattern.es["key"] = [int(x) for x in pattern.es["key"]]
+                                pattern.es["key"] = [str(x) for x in pattern.es["key"]]
                             pattern.write(os.path.join(save_pattern_dir, patterns_id + "_%d.gml" % (p)))
                         pattern_cnt += CONFIG["number_of_patterns"]
                         print("patterns_id", patterns_id)
@@ -437,17 +549,17 @@ if __name__ == "__main__":
         base_name = os.path.splitext(pattern_file)[0]
         
         # 确保pattern的节点和边标签都是字符串类型
-        pattern.vs["label"] = [int(x) for x in pattern.vs["label"]]
+        pattern.vs["label"] = [str(x) for x in pattern.vs["label"]]
         if pattern.ecount() > 0:
-            pattern.es["label"] = [int(x) for x in pattern.es["label"]]
+            pattern.es["label"] = [str(x) for x in pattern.es["label"]]
         
         graph_generator = GraphGenerator(pattern)
         
         # 使用pattern的实际参数而不是配置中的参数
         pattern_vertices = pattern.vcount()
         pattern_edges = pattern.ecount()
-        pattern_vertex_labels = len(set(int(x) for x in pattern.vs["label"]))
-        pattern_edge_labels = len(set(int(x) for x in pattern.es["label"])) if pattern.ecount() > 0 else 0
+        pattern_vertex_labels = len(set(str(x) for x in pattern.vs["label"]))
+        pattern_edge_labels = len(set(str(x) for x in pattern.es["label"])) if pattern.ecount() > 0 else 0
         
         # 为每个pattern只创建一个目录，使用原始pattern名称
         save_graph_dir_p = os.path.join(save_graph_dir, base_name)
