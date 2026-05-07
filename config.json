@@ -1,0 +1,23 @@
+{
+    "max_subgraph": 512,
+
+    "alphas": [0.5],
+
+    "number_of_patterns": 1,
+    "number_of_pattern_vertices": [3, 4],
+    "number_of_pattern_edges": [2, 4],
+    "number_of_pattern_vertex_labels": [2, 4],
+    "number_of_pattern_edge_labels": [2, 4],
+
+    "number_of_graphs": 10, 
+    "number_of_graph_vertices": [16, 64],
+    "number_of_graph_edges": [16, 64, 256],
+    "number_of_graph_vertex_labels": [4, 8],
+    "number_of_graph_edge_labels": [4, 8],
+
+    "max_ratio_of_edges_vertices": 4,
+    "max_pattern_counts": 1024,
+
+    "save_data_dir": "E:\\wyh\\layout\\code\\NeuralSubgraphCounting\\data\\deep",
+    "num_workers": 16
+}
