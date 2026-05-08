@@ -1,0 +1,187 @@
+Subgraph Generation Summary
+==================================================
+Total Graphs Generated: 8000
+Number of Patterns: 36
+
+Pattern Details:
+------------------------------
+Pattern: Cascode_Pair_000000
+  Vertices: 2, Edges: 2
+  Vertex Labels: 1, Edge Labels: 2
+  Graphs Generated: 240
+
+Pattern: Cascode_Pair_000001
+  Vertices: 2, Edges: 2
+  Vertex Labels: 1, Edge Labels: 2
+  Graphs Generated: 240
+
+Pattern: Cascode_Pair_001000
+  Vertices: 2, Edges: 2
+  Vertex Labels: 1, Edge Labels: 2
+  Graphs Generated: 240
+
+Pattern: Cascode_Pair_001001
+  Vertices: 2, Edges: 2
+  Vertex Labels: 1, Edge Labels: 2
+  Graphs Generated: 240
+
+Pattern: Common_Source_000000
+  Vertices: 2, Edges: 2
+  Vertex Labels: 2, Edge Labels: 2
+  Graphs Generated: 240
+
+Pattern: Common_Source_000001
+  Vertices: 2, Edges: 2
+  Vertex Labels: 2, Edge Labels: 2
+  Graphs Generated: 240
+
+Pattern: Cross-coupled_Pair_000000
+  Vertices: 2, Edges: 2
+  Vertex Labels: 1, Edge Labels: 1
+  Graphs Generated: 240
+
+Pattern: Cross-coupled_Pair_000001
+  Vertices: 2, Edges: 2
+  Vertex Labels: 1, Edge Labels: 1
+  Graphs Generated: 240
+
+Pattern: Cross-coupled_Pair_001000
+  Vertices: 2, Edges: 2
+  Vertex Labels: 1, Edge Labels: 1
+  Graphs Generated: 240
+
+Pattern: Cross-coupled_Pair_001001
+  Vertices: 2, Edges: 2
+  Vertex Labels: 1, Edge Labels: 1
+  Graphs Generated: 240
+
+Pattern: Current_Mirror_000000
+  Vertices: 2, Edges: 2
+  Vertex Labels: 1, Edge Labels: 2
+  Graphs Generated: 240
+
+Pattern: Current_Mirror_000001
+  Vertices: 2, Edges: 2
+  Vertex Labels: 1, Edge Labels: 2
+  Graphs Generated: 240
+
+Pattern: Current_Mirror_001000
+  Vertices: 2, Edges: 2
+  Vertex Labels: 1, Edge Labels: 2
+  Graphs Generated: 240
+
+Pattern: Current_Mirror_001001
+  Vertices: 2, Edges: 2
+  Vertex Labels: 1, Edge Labels: 2
+  Graphs Generated: 240
+
+Pattern: Differential_Pair_000000
+  Vertices: 2, Edges: 2
+  Vertex Labels: 1, Edge Labels: 1
+  Graphs Generated: 240
+
+Pattern: Differential_Pair_000001
+  Vertices: 2, Edges: 2
+  Vertex Labels: 1, Edge Labels: 1
+  Graphs Generated: 240
+
+Pattern: Differential_Pair_001000
+  Vertices: 2, Edges: 2
+  Vertex Labels: 1, Edge Labels: 1
+  Graphs Generated: 240
+
+Pattern: Differential_Pair_001001
+  Vertices: 2, Edges: 2
+  Vertex Labels: 1, Edge Labels: 1
+  Graphs Generated: 240
+
+Pattern: Five_Transistor_OTA_000000
+  Vertices: 5, Edges: 14
+  Vertex Labels: 2, Edge Labels: 9
+  Graphs Generated: 80
+
+Pattern: Five_Transistor_OTA_000001
+  Vertices: 5, Edges: 14
+  Vertex Labels: 2, Edge Labels: 9
+  Graphs Generated: 80
+
+Pattern: Five_Transistor_OTA_n_000000
+  Vertices: 5, Edges: 14
+  Vertex Labels: 2, Edge Labels: 9
+  Graphs Generated: 80
+
+Pattern: Five_Transistor_OTA_n_000001
+  Vertices: 5, Edges: 14
+  Vertex Labels: 2, Edge Labels: 9
+  Graphs Generated: 80
+
+Pattern: Inverter_Pair_000000
+  Vertices: 2, Edges: 2
+  Vertex Labels: 2, Edge Labels: 2
+  Graphs Generated: 240
+
+Pattern: Inverter_Pair_000001
+  Vertices: 2, Edges: 2
+  Vertex Labels: 2, Edge Labels: 2
+  Graphs Generated: 240
+
+Pattern: Level_Shifter_000000
+  Vertices: 2, Edges: 2
+  Vertex Labels: 1, Edge Labels: 2
+  Graphs Generated: 240
+
+Pattern: Level_Shifter_000001
+  Vertices: 2, Edges: 2
+  Vertex Labels: 1, Edge Labels: 2
+  Graphs Generated: 240
+
+Pattern: Level_Shifter_001000
+  Vertices: 2, Edges: 2
+  Vertex Labels: 1, Edge Labels: 2
+  Graphs Generated: 240
+
+Pattern: Level_Shifter_001001
+  Vertices: 2, Edges: 2
+  Vertex Labels: 1, Edge Labels: 2
+  Graphs Generated: 240
+
+Pattern: Voltage_Reference_II_000000
+  Vertices: 2, Edges: 2
+  Vertex Labels: 1, Edge Labels: 2
+  Graphs Generated: 240
+
+Pattern: Voltage_Reference_II_000001
+  Vertices: 2, Edges: 2
+  Vertex Labels: 1, Edge Labels: 2
+  Graphs Generated: 240
+
+Pattern: Voltage_Reference_II_001000
+  Vertices: 2, Edges: 2
+  Vertex Labels: 1, Edge Labels: 2
+  Graphs Generated: 240
+
+Pattern: Voltage_Reference_II_001001
+  Vertices: 2, Edges: 2
+  Vertex Labels: 1, Edge Labels: 2
+  Graphs Generated: 240
+
+Pattern: Voltage_Reference_I_000000
+  Vertices: 2, Edges: 2
+  Vertex Labels: 1, Edge Labels: 2
+  Graphs Generated: 240
+
+Pattern: Voltage_Reference_I_000001
+  Vertices: 2, Edges: 2
+  Vertex Labels: 1, Edge Labels: 2
+  Graphs Generated: 240
+
+Pattern: Voltage_Reference_I_001000
+  Vertices: 2, Edges: 2
+  Vertex Labels: 1, Edge Labels: 2
+  Graphs Generated: 240
+
+Pattern: Voltage_Reference_I_001001
+  Vertices: 2, Edges: 2
+  Vertex Labels: 1, Edge Labels: 2
+  Graphs Generated: 240
+

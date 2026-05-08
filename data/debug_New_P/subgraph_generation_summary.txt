@@ -1,0 +1,27 @@
+Subgraph Generation Summary
+==================================================
+Total Graphs Generated: 560
+Number of Patterns: 4
+
+Pattern Details:
+------------------------------
+Pattern: P_N2_E2_NL2_EL2_0
+  Vertices: 2, Edges: 2
+  Vertex Labels: 1, Edge Labels: 2
+  Graphs Generated: 240
+
+Pattern: P_N3_E6_NL2_EL2_0
+  Vertices: 3, Edges: 6
+  Vertex Labels: 1, Edge Labels: 6
+  Graphs Generated: 160
+
+Pattern: P_N4_E8_NL2_EL2_0
+  Vertices: 4, Edges: 10
+  Vertex Labels: 2, Edge Labels: 9
+  Graphs Generated: 80
+
+Pattern: P_N5_E14_NL4_EL2_0
+  Vertices: 5, Edges: 14
+  Vertex Labels: 2, Edge Labels: 12
+  Graphs Generated: 80
+
