@@ -3,7 +3,6 @@ import argparse
 import os
 import igraph as ig
 import json
-import shutil
 from multiprocessing import Pool
 from utils import generate_labels, get_direction
 from pattern_checker_P import PatternChecker
@@ -11,7 +10,6 @@ from graph_generator_Patterns_exist_gen import GraphGenerator
 from pattern_generator_P import generate_patterns
 from time import sleep
 from tqdm import tqdm
-from analog_circuit_generator import AnalogCircuitGenerator, TEMPLATES, save_circuit_graph, circuit_graph_to_igraph
 
 
 DEBUG_CONFIG = {
@@ -90,182 +88,6 @@ LARGE_CONFIG = {
 }
 
 CONFIG = DEBUG_CONFIG
-
-
-def parse_args():
-    parser = argparse.ArgumentParser(
-        description="Generate analog-semantic subgraph datasets.")
-    parser.add_argument(
-        "--dataset_mode",
-        choices=["analog_pattern_dataset", "patterns_exist_legacy", "analog_legacy"],
-        default="analog_pattern_dataset",
-        help="Unified dataset pipeline by default; legacy modes are kept for compatibility."
-    )
-    # analog mode args
-    parser.add_argument("--tech", type=str, default="180nm", choices=["110nm", "180nm"])
-    parser.add_argument("--num_graphs", type=int, default=5)
-    parser.add_argument("--min_devices", type=int, default=50)
-    parser.add_argument("--max_devices", type=int, default=600)
-    parser.add_argument("--target_devices", type=int, default=None)
-    parser.add_argument("--template", type=str, default=None,
-                        choices=[t["name"] for t in TEMPLATES])
-    parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--analog_save_dir", type=str, default="./data/analog")
-    parser.add_argument("--pattern_source", choices=["existing", "generate"], default="existing")
-    parser.add_argument("--pattern_dir", type=str, default=None)
-    parser.add_argument("--dataset_save_dir", type=str, default="./data/analog_pattern_dataset")
-    parser.add_argument("--num_samples_per_pattern", type=int, default=20)
-    parser.add_argument("--max_resample", type=int, default=10)
-    parser.add_argument("--label_mode", choices=["count", "existence", "both"], default="both")
-    return parser.parse_args()
-
-
-def run_analog_generation(args):
-    os.makedirs(args.analog_save_dir, exist_ok=True)
-    forced_template = None
-    if args.template:
-        forced_template = next(t for t in TEMPLATES if t["name"] == args.template)
-
-    gen = AnalogCircuitGenerator(
-        tech_name=args.tech,
-        min_devices=args.min_devices,
-        max_devices=args.max_devices,
-        seed=args.seed,
-    )
-
-    for i in range(args.num_graphs):
-        cg = gen.generate(target_devices=args.target_devices, template=forced_template)
-        ok, violations = gen.validate(cg)
-        out_path = os.path.join(
-            args.analog_save_dir,
-            "circuit_%s_N%d_%d.gml" % (args.tech, cg.num_devices(), i))
-        save_circuit_graph(cg, out_path)
-        print("[%d] devices=%d  nets=%d  edges=%d  valid=%s  path=%s"
-              % (i, cg.num_devices(), cg.num_nets(), cg.g.ecount(), ok, out_path))
-        if not ok:
-            print("    violations:", violations)
-
-
-def _load_or_generate_patterns(args, save_pattern_dir):
-    if args.pattern_source == "existing":
-        src_dir = args.pattern_dir or CONFIG.get("existing_pattern_dir")
-        if not src_dir or not os.path.exists(src_dir):
-            raise ValueError("pattern_source=existing requires a valid --pattern_dir (or CONFIG existing_pattern_dir).")
-        patterns = load_existing_patterns(src_dir)
-        for p in patterns:
-            if os.path.exists(p["path"]):
-                shutil.copy2(p["path"], os.path.join(save_pattern_dir, p["file"]))
-        return patterns
-
-    # generate模式：复用原有pattern生成逻辑
-    for number_of_pattern_vertices in CONFIG["number_of_pattern_vertices"]:
-        for number_of_pattern_vertex_labels in CONFIG["number_of_pattern_vertex_labels"]:
-            if number_of_pattern_vertex_labels > number_of_pattern_vertices:
-                continue
-            for number_of_pattern_edges in CONFIG["number_of_pattern_edges"]:
-                if number_of_pattern_edges < number_of_pattern_vertices - 1:
-                    continue
-                if number_of_pattern_edges > CONFIG["max_ratio_of_edges_vertices"] * number_of_pattern_vertices:
-                    continue
-                for number_of_pattern_edge_labels in CONFIG["number_of_pattern_edge_labels"]:
-                    if number_of_pattern_edge_labels > number_of_pattern_edges:
-                        continue
-                    patterns_id = "P_N%d_E%d_NL%d_EL%d" % (
-                        number_of_pattern_vertices, number_of_pattern_edges,
-                        number_of_pattern_vertex_labels, number_of_pattern_edge_labels)
-                    for p, pattern in enumerate(generate_patterns(
-                        number_of_pattern_vertices, number_of_pattern_edges,
-                        number_of_pattern_vertex_labels, number_of_pattern_edge_labels,
-                        CONFIG["number_of_patterns"])):
-                        pattern.vs["label"] = [str(x) for x in pattern.vs["label"]]
-                        pattern.es["label"] = [str(x) for x in pattern.es["label"]]
-                        if "key" in pattern.es.attributes():
-                            pattern.es["key"] = [str(x) for x in pattern.es["key"]]
-                        pattern.write(os.path.join(save_pattern_dir, patterns_id + "_%d.gml" % p))
-    return load_existing_patterns(save_pattern_dir)
-
-
-def run_analog_pattern_dataset(args):
-    np.random.seed(args.seed)
-    dataset_root = args.dataset_save_dir
-    save_pattern_dir = os.path.join(dataset_root, "patterns")
-    save_graph_dir = os.path.join(dataset_root, "graphs")
-    save_metadata_dir = os.path.join(dataset_root, "metadata")
-    os.makedirs(save_pattern_dir, exist_ok=True)
-    os.makedirs(save_graph_dir, exist_ok=True)
-    os.makedirs(save_metadata_dir, exist_ok=True)
-
-    patterns = _load_or_generate_patterns(args, save_pattern_dir)
-    checker = PatternChecker()
-    gen = AnalogCircuitGenerator(
-        tech_name=args.tech,
-        min_devices=args.min_devices,
-        max_devices=args.max_devices,
-        seed=args.seed,
-    )
-
-    summary = {"total_graphs": 0, "valid_graphs": 0, "patterns": []}
-    for pidx, pinfo in enumerate(patterns):
-        pattern = pinfo["pattern"]
-        pattern_name = os.path.splitext(pinfo["file"])[0]
-        p_graph_dir = os.path.join(save_graph_dir, pattern_name)
-        p_meta_dir = os.path.join(save_metadata_dir, pattern_name)
-        os.makedirs(p_graph_dir, exist_ok=True)
-        os.makedirs(p_meta_dir, exist_ok=True)
-        p_stats = {"pattern": pattern_name, "generated": 0, "valid": 0, "positive": 0, "sum_count": 0}
-
-        for i in range(args.num_samples_per_pattern):
-            cg = None
-            ok = False
-            violations = []
-            for _ in range(args.max_resample):
-                cg = gen.generate(target_devices=args.target_devices)
-                ok, violations = gen.validate(cg)
-                if ok:
-                    break
-            if cg is None:
-                continue
-            g = circuit_graph_to_igraph(cg)
-            # 为了与pattern checker兼容，提供简单label映射
-            g.vs["label"] = [str(v["node_type"]) for v in g.vs]
-            g.es["label"] = [str(e["port_type"]) for e in g.es]
-            subisomorphisms = checker.get_subisomorphisms(g, pattern)
-            count = len(subisomorphisms)
-            exists = count > 0
-
-            meta = {
-                "graph_id": f"{pattern_name}_{i}",
-                "pattern_name": pattern_name,
-                "pattern_source": args.pattern_source,
-                "label_mode": args.label_mode,
-                "count": count,
-                "exists": exists,
-                "subisomorphisms": subisomorphisms,
-                "physics_valid": ok,
-                "violations": violations,
-                "tech": args.tech,
-                "device_count": cg.num_devices(),
-                "net_count": cg.num_nets(),
-                "edge_count": cg.g.ecount(),
-            }
-
-            graph_path = os.path.join(p_graph_dir, f"{pattern_name}_{i}.gml")
-            meta_path = os.path.join(p_meta_dir, f"{pattern_name}_{i}.meta.json")
-            save_circuit_graph(cg, graph_path)
-            with open(meta_path, "w", encoding="utf-8") as f:
-                json.dump(meta, f, ensure_ascii=False)
-
-            p_stats["generated"] += 1
-            p_stats["valid"] += int(ok)
-            p_stats["positive"] += int(exists)
-            p_stats["sum_count"] += count
-            summary["total_graphs"] += 1
-            summary["valid_graphs"] += int(ok)
-
-        summary["patterns"].append(p_stats)
-
-    with open(os.path.join(dataset_root, "summary.json"), "w", encoding="utf-8") as f:
-        json.dump(summary, f, ensure_ascii=False, indent=2)
 
 def generate_graphs(graph_generator, number_of_graph_vertices, number_of_graph_edges, number_of_graph_vertex_labels, number_of_graph_edge_labels,
     alpha, max_pattern_counts, max_subgraph, number_of_graphs, save_graph_dir, save_metadata_dir):
@@ -396,19 +218,25 @@ def load_existing_patterns(pattern_dir):
             print(f"Attempting to load pattern: {pattern_file}")
             
             # 首先检查文件是否为空或损坏
-            if os.path.getsize(pattern_path) == 0:
-                print(f"Warning: Pattern file {pattern_file} is empty, skipping")
+            if not os.path.exists(pattern_path) or os.path.getsize(pattern_path) == 0:
+                print(f"Warning: Pattern file {pattern_file} is empty or does not exist")
                 continue
-            
+                
             # 尝试读取文件内容
             with open(pattern_path, 'r', encoding='utf-8', errors='ignore') as f:
-                content = f.read().strip()
+                content = f.read()
+                print(f"File content preview (first 500 chars): {content[:500]}")
+                
+                # 清理文件内容
+                import re
+                # 移除BOM头
+                if content.startswith('\ufeff'):
+                    content = content[1:]
+                
+                # 移除开头的任何非字母数字字符
+                content = re.sub(r'^[^a-zA-Z]*', '', content)
             
-            if not content:
-                print(f"Warning: Pattern file {pattern_file} has no content, skipping")
-                continue
-            
-            # 使用临时文件处理，避免原文件格式问题
+            # 将清理后的内容写入临时文件
             import tempfile
             with tempfile.NamedTemporaryFile(mode='w', suffix='.gml', delete=False) as temp_file:
                 temp_file.write(content)
@@ -648,14 +476,6 @@ def create_simple_pattern_from_filename(filename):
 #         x.get()
 #     print("%d graphs generation finished!" % (graph_cnt))
 if __name__ == "__main__":
-    args = parse_args()
-    if args.dataset_mode == "analog_pattern_dataset":
-        run_analog_pattern_dataset(args)
-        raise SystemExit(0)
-    if args.dataset_mode == "analog_legacy":
-        run_analog_generation(args)
-        raise SystemExit(0)
-
     save_pattern_dir = os.path.join(CONFIG["save_data_dir"], "patterns")
     save_graph_dir = os.path.join(CONFIG["save_data_dir"], "graphs")
     save_metadata_dir = os.path.join(CONFIG["save_data_dir"], "metadata")
